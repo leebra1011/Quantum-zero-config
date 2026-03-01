@@ -72,19 +72,20 @@ app.get('/', (_req, res) => {
       <p>Profit split 90 / 10 → you earn first</p>
       <button id="exe">Execute Trade (0 ETH)</button>
       <p id="hash"></p>
+      <script src="/socket.io/socket.io.js"></script>
       <script>
         const socket = io();
         socket.on('live', d => { document.getElementById('spread').innerText = d.profit; });
         document.getElementById('exe').onclick = async () => {
           const r = await fetch('/trade', { method: 'POST', body: JSON.stringify({ userAddress: '0xSender' }), headers:{'Content-Type':'application/json'} });
           const j = await r.json();
-          alert(`Trade simulated! Your share: ${j.toUser} ETH`);
+          alert('Trade simulated! Your share: ' + j.toUser + ' ETH');
           document.getElementById('hash').innerText = 'Sim hash: ' + j.txHash;
         };
       </script>
     </body></html>`);
 });
 
-const PORT = 5000;
-import('http').then(http => http.createServer(app).listen(PORT, () => console.log(`🚀 Zero-ETH trading live on http://localhost:${PORT}`)));
+const PORT = process.env.PORT || 5000;
+httpServer.listen(PORT, () => console.log(`🚀 Zero-ETH trading live on http://localhost:${PORT}`));
 
