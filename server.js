@@ -10,6 +10,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: '*' } });
 app.use(cors());
+app.use(express.json());
 app.use(express.static('public'));
 
 // portable Demo data for rapid on-phone testing
