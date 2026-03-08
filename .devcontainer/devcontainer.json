@@ -1,0 +1,25 @@
+{
+  "name": "Quantum-zero-config",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "vitest.explorer"
+      ],
+      "settings": {
+        "npm.packageManager": "npm"
+      }
+    }
+  },
+  "postCreateCommand": "npm ci",
+  "remoteEnv": {
+    "NPM_CONFIG_CACHE": "/home/node/.npm"
+  }
+}
