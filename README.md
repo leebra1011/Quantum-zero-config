@@ -9,6 +9,8 @@ Zero-ETH quantum arbitrage trading demo — a Node.js/Express app that simulates
 - **Live spread tracking** — polls Uniswap V2 and Binance for real-time ETH prices
 - **WebSocket dashboard** — phone-friendly UI pushed via Socket.IO
 - **Zero-ETH trade simulation** — signs and hashes a meta-transaction locally, splitting profit 90/10 between user and relayer
+- **Prices API** — `GET /prices` endpoint for current spread and profit data
+- **Trade history** — keeps a ring buffer of the last 20 trades, accessible via `GET /history` and shown in the dashboard
 
 ## Prerequisites
 
@@ -56,6 +58,31 @@ Simulates a zero-ETH arbitrage trade.
 ```
 
 Returns `400` if `userAddress` is missing.
+
+### `GET /prices`
+
+Returns the latest spread and estimated profit values.
+
+**Response**
+```json
+{ "spread": 0.0041, "profit": 0.0039 }
+```
+
+### `GET /history`
+
+Returns the last 20 simulated trades, newest first.
+
+**Response**
+```json
+[
+  {
+    "txHash": "0x...",
+    "toUser": 0.0018,
+    "toRelayer": 0.0002,
+    "timestamp": "2026-03-08T21:00:00.000Z"
+  }
+]
+```
 
 ## Scripts
 
