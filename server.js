@@ -4,24 +4,27 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import { createServer } from 'http';
 import fetch from 'node-fetch';
-import { Wallet, ethers } from 'ethers';
+import { Wallet, parseEther, keccak256 } from 'ethers';
 
-const app = express();
-const httpServer = createServer(app);
+export const app = express();
+export const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: '*' } });
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// portable Demo data for rapid on-phone testing
-let demoSpread = 0.004, demoProfit = 0.002;
+// Demo data for rapid on-phone testing (updated by fetchPrices)
+export let demoSpread = 0.004;
+export let demoProfit = 0.002;
 
-// live data stub
-const fetchPrices = async () => {
+let priceTimer = null;
+
+// live data stub – fetches real prices from Uniswap V2 and Binance
+export const fetchPrices = async () => {
   try {
-    const uni = await fetch(`https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2`, {
+    const uni = await fetch('https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2', {
       method: 'POST',
-      body: JSON.stringify({ query: `{ pairs(first: 1, where:{ token0: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"}) { token0Price } }` }),
+      body: JSON.stringify({ query: '{ pairs(first: 1, where:{ token0: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"}) { token0Price } }' }),
       headers: { 'Content-Type': 'application/json' }
     });
     const uniData = await uni.json();
@@ -30,14 +33,13 @@ const fetchPrices = async () => {
     const binData = await bin.json();
     const binMid = (parseFloat(binData.bidPrice) + parseFloat(binData.askPrice)) / 2;
     demoSpread = Math.max(0.001, binMid - uniPrice);
-    demoProfit = Math.max(0.001, demoSpread - 0.0002); // super-simple gas est
-  } catch (e) { /* fallback */ }
-  setTimeout(fetchPrices, 5000);
+    demoProfit = Math.max(0.001, demoSpread - 0.0002); // super-simple gas estimate
+  } catch (_e) { /* retain previous values on network error */ }
+  priceTimer = setTimeout(fetchPrices, 5000);
 };
-fetchPrices();
 
 // ---------- websocket push ----------
-setInterval(() => {
+const liveInterval = setInterval(() => {
   io.emit('live', {
     spread: demoSpread.toFixed(4),
     profit: demoProfit.toFixed(4)
@@ -45,21 +47,29 @@ setInterval(() => {
 }, 1000);
 
 // ---------- zero-ETH metatx ----------
-const EP = '0x5FF137D4b0FDcd49dCa30c7CF57E578a026d2789'; // ERC-4337 EntryPoint
-const relayerWallet = Wallet.createRandom(); // generates zero-fund wallet
+// ERC-4337 EntryPoint (unused in simulation but kept for reference)
+// const EP = '0x5FF137D4b0FDcd49dCa30c7CF57E578a026d2789';
+const relayerWallet = Wallet.createRandom();
 console.log('Relayer address:', relayerWallet.address);
 
 app.post('/trade', async (req, res) => {
-  const user = req.body.userAddress;
+  const { userAddress } = req.body;
+  if (!userAddress) {
+    return res.status(400).json({ error: 'userAddress is required' });
+  }
   const profit = demoProfit;
   const toUser = profit * 0.9;
   const toRelayer = profit * 0.1;
   const tx = {
     to: relayerWallet.address,
-    value: ethers.utils.parseEther(profit.toString())
+    value: parseEther(profit.toString()),
+    chainId: 1,
+    nonce: 0,
+    gasLimit: 21000,
+    gasPrice: 0
   };
   const signed = await relayerWallet.signTransaction(tx);
-  return res.json({ txHash: ethers.utils.keccak256(signed), toUser, toRelayer });
+  return res.json({ txHash: keccak256(signed), toUser, toRelayer });
 });
 
 // ---------- serve phone dashboard ----------
@@ -70,7 +80,7 @@ app.get('/', (_req, res) => {
     h1{font-size:2em}</style></head>
     <body>
       <h1>Quantum Bridge <span id="spread">...</span></h1>
-      <p>Profit split 90 / 10 → you earn first</p>
+      <p>Profit split 90 / 10 &rarr; you earn first</p>
       <button id="exe">Execute Trade (0 ETH)</button>
       <p id="hash"></p>
       <script src="/socket.io/socket.io.js"></script>
@@ -87,6 +97,18 @@ app.get('/', (_req, res) => {
     </body></html>`);
 });
 
+// Graceful shutdown helper (used in tests)
+export function shutdown() {
+  clearInterval(liveInterval);
+  if (priceTimer) clearTimeout(priceTimer);
+  return new Promise(resolve => httpServer.close(resolve));
+}
+
 const PORT = process.env.PORT || 5000;
-httpServer.listen(PORT, () => console.log(`🚀 Zero-ETH trading live on http://localhost:${PORT}`));
+
+// Only start listening when run directly (not imported by tests)
+if (process.env.NODE_ENV !== 'test') {
+  fetchPrices();
+  httpServer.listen(PORT, () => console.log(`\uD83D\uDE80 Zero-ETH trading live on http://localhost:${PORT}`));
+}
 
