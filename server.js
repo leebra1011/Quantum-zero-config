@@ -17,6 +17,10 @@ app.use(express.static('public'));
 export let demoSpread = 0.004;
 export let demoProfit = 0.002;
 
+// Ring buffer of the last 20 simulated trades
+const HISTORY_MAX = 20;
+export const tradeHistory = [];
+
 let priceTimer = null;
 
 // live data stub – fetches real prices from Uniswap V2 and Binance
@@ -69,7 +73,21 @@ app.post('/trade', async (req, res) => {
     gasPrice: 0
   };
   const signed = await relayerWallet.signTransaction(tx);
-  return res.json({ txHash: keccak256(signed), toUser, toRelayer });
+  const txHash = keccak256(signed);
+  const entry = { txHash, toUser, toRelayer, timestamp: new Date().toISOString() };
+  tradeHistory.push(entry);
+  if (tradeHistory.length > HISTORY_MAX) tradeHistory.shift();
+  return res.json({ txHash, toUser, toRelayer });
+});
+
+// ---------- prices API ----------
+app.get('/prices', (_req, res) => {
+  res.json({ spread: demoSpread, profit: demoProfit });
+});
+
+// ---------- trade history API ----------
+app.get('/history', (_req, res) => {
+  res.json(tradeHistory.slice().reverse());
 });
 
 // ---------- serve phone dashboard ----------
@@ -77,21 +95,40 @@ app.get('/', (_req, res) => {
   res.send(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width" /><title>Zero-ETH Trader</title>
     <style>body{background:#111;color:#0f0;font-family:sans-serif;text-align:center}
     button{background:#0f0;border:none;padding:1em 2em;font-size:1.5em;margin-top:2em}
-    h1{font-size:2em}</style></head>
+    h1{font-size:2em}
+    #history{margin-top:2em;text-align:left;max-width:480px;display:inline-block}
+    #history h2{font-size:1.1em;border-bottom:1px solid #0f0;padding-bottom:.3em}
+    #history ul{list-style:none;padding:0;margin:0;font-size:.8em}
+    #history li{padding:.3em 0;border-bottom:1px solid #1a1a1a;word-break:break-all}</style></head>
     <body>
       <h1>Quantum Bridge <span id="spread">...</span></h1>
       <p>Profit split 90 / 10 &rarr; you earn first</p>
       <button id="exe">Execute Trade (0 ETH)</button>
       <p id="hash"></p>
+      <div id="history"><h2>Recent Trades</h2><ul id="trades"><li>No trades yet</li></ul></div>
       <script src="/socket.io/socket.io.js"></script>
       <script>
         const socket = io();
-        socket.on('live', d => { document.getElementById('spread').innerText = d.profit; });
+        socket.on('live', d => {
+          document.getElementById('spread').innerText = 'spread ' + d.spread + ' | profit ' + d.profit;
+        });
+        function loadHistory() {
+          fetch('/history').then(r => r.json()).then(trades => {
+            const ul = document.getElementById('trades');
+            if (!trades.length) { ul.innerHTML = '<li>No trades yet</li>'; return; }
+            ul.innerHTML = trades.map(t =>
+              '<li>' + t.timestamp.replace('T',' ').slice(0,19) +
+              ' &rarr; +' + t.toUser.toFixed(6) + ' ETH | hash: ' + t.txHash.slice(0,12) + '…</li>'
+            ).join('');
+          });
+        }
+        loadHistory();
         document.getElementById('exe').onclick = async () => {
           const r = await fetch('/trade', { method: 'POST', body: JSON.stringify({ userAddress: '0xSender' }), headers:{'Content-Type':'application/json'} });
           const j = await r.json();
           alert('Trade simulated! Your share: ' + j.toUser + ' ETH');
           document.getElementById('hash').innerText = 'Sim hash: ' + j.txHash;
+          loadHistory();
         };
       </script>
     </body></html>`);
