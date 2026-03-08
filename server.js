@@ -38,7 +38,7 @@ export const fetchPrices = async () => {
     const binMid = (parseFloat(binData.bidPrice) + parseFloat(binData.askPrice)) / 2;
     demoSpread = Math.max(0.001, binMid - uniPrice);
     demoProfit = Math.max(0.001, demoSpread - 0.0002); // super-simple gas estimate
-  } catch (_e) { /* retain previous values on network error */ }
+  } catch { /* retain previous values on network error */ }
   priceTimer = setTimeout(fetchPrices, 5000);
 };
 
@@ -146,6 +146,6 @@ const PORT = process.env.PORT || 5000;
 // Only start listening when run directly (not imported by tests)
 if (process.env.NODE_ENV !== 'test') {
   fetchPrices();
-  httpServer.listen(PORT, () => console.log(`\uD83D\uDE80 Zero-ETH trading live on http://localhost:${PORT}`));
+  httpServer.listen(PORT, '0.0.0.0', () => console.log(`\uD83D\uDE80 Zero-ETH trading live on http://localhost:${PORT}`));
 }
 
