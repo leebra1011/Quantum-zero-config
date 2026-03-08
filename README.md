@@ -12,9 +12,13 @@ Zero-ETH quantum arbitrage trading demo — a Node.js/Express app that simulates
 - **Prices API** — `GET /prices` endpoint for current spread and profit data
 - **Trade history** — keeps a ring buffer of the last 20 trades, accessible via `GET /history` and shown in the dashboard
 
+## Codespaces
+
+Click **Code → Codespaces → Create codespace** on GitHub to launch a fully configured cloud dev environment based on **Node.js 22**. The container runs `npm ci` automatically, so the project is ready to use the moment the Codespace finishes starting — no local setup required. The ESLint extension is pre-installed for in-editor linting.
+
 ## Prerequisites
 
-- Node.js ≥ 18
+- Node.js ≥ 18 (Node 22 used in the dev container)
 - npm ≥ 9
 
 ## Getting Started
