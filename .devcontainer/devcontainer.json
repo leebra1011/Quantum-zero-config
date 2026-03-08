@@ -1,12 +1,14 @@
 {
   "name": "Quantum-zero-config",
-  "image": "mcr.microsoft.com/devcontainers/typescript-node:22",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "22"
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bookworm",
+  "forwardPorts": [5000],
+  "portsAttributes": {
+    "5000": {
+      "label": "Zero-ETH Trader",
+      "onAutoForward": "openBrowserOnce"
     }
   },
+  "postCreateCommand": "npm install",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -14,12 +16,8 @@
         "vitest.explorer"
       ],
       "settings": {
-        "npm.packageManager": "npm"
+        "eslint.useFlatConfig": true
       }
     }
-  },
-  "postCreateCommand": "npm ci",
-  "remoteEnv": {
-    "NPM_CONFIG_CACHE": "/home/node/.npm"
   }
 }
