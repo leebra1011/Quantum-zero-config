@@ -67,7 +67,7 @@ Run `npm run lint` after making changes and fix any reported issues before commi
 - Each test file imports `{ app, httpServer, shutdown }` from `../server.js`.
 - Use `beforeAll` to start `httpServer` on port `0` (random) and `afterAll` to call `shutdown()`.
 - Prefer integration tests over unit tests for Express routes.
-- Aim to keep test coverage for all public API endpoints (`GET /`, `POST /trade`).
+- Aim to keep test coverage for all public API endpoints: `GET /`, `POST /trade`, `GET /prices`, and `GET /history`.
 
 ## Security Notes
 
